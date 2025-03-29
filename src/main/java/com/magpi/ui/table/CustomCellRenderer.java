@@ -5,19 +5,19 @@ import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
 
 /**
- * Custom cell renderer that applies color based on measurement thresholds
+ * Custom renderer for table cells that applies color based on threshold values
  */
 public class CustomCellRenderer extends DefaultTableCellRenderer {
-    private final double thresholdValue;
+    private final double threshold;
     private final PersistentColorTableModel tableModel;
 
     /**
-     * Creates a new CustomCellRenderer
-     * @param thresholdValue The threshold value for pass/fail coloring
-     * @param tableModel The model containing color information
+     * Creates a new custom cell renderer
+     * @param threshold The threshold value for coloring cells
+     * @param tableModel The table model that stores cell colors
      */
-    public CustomCellRenderer(double thresholdValue, PersistentColorTableModel tableModel) {
-        this.thresholdValue = thresholdValue;
+    public CustomCellRenderer(double threshold, PersistentColorTableModel tableModel) {
+        this.threshold = threshold;
         this.tableModel = tableModel;
     }
 
@@ -28,51 +28,49 @@ public class CustomCellRenderer extends DefaultTableCellRenderer {
         Component cell = super.getTableCellRendererComponent(
                 table, value, isSelected, hasFocus, row, column);
 
-        // First check if there's a previously set color for this cell
+        // Reset background
+        cell.setBackground(Color.WHITE);
+
+        // Get saved cell color if it exists
         Color savedColor = tableModel.getCellColor(row, column);
         if (savedColor != null) {
             cell.setBackground(savedColor);
             return cell;
         }
 
-        // Handle pass/fail column
-        if (column == table.getColumnCount() - 1) {
-            if ("Accept".equals(value)) {
-                cell.setBackground(new Color(144, 238, 144, 150)); // Light Green
-            } else if ("Reject".equals(value)) {
-                cell.setBackground(new Color(255, 160, 122, 150)); // Light Red
-            } else {
-                cell.setBackground(Color.WHITE);
-            }
-            return cell;
-        }
+        // Only color numeric cells (current values) that are in odd columns (1, 3, 5, 7, 9)
+        if (column % 2 == 1 && column > 0 && column < table.getColumnCount() - 1) {
+            if (value != null && !value.toString().trim().isEmpty()) {
+                try {
+                    double current = Double.parseDouble(value.toString());
+                    if (current >= threshold) {
+                        cell.setBackground(Color.GREEN);
+                        tableModel.setCellColor(row, column, Color.GREEN);
+                    } else {
+                        cell.setBackground(Color.RED);
+                        tableModel.setCellColor(row, column, Color.RED);
 
-        // Only color measurement columns (odd-indexed columns after the first)
-        if (column % 2 == 1 && column > 0 && value != null && !value.toString().isEmpty()) {
-            try {
-                double currentValue = Double.parseDouble(value.toString());
-                Color newColor;
-
-                // Apply coloring based on parameter value
-                if (currentValue > thresholdValue) {
-                    newColor = new Color(144, 238, 144, 150); // Light Green with reduced opacity
-                } else {
-                    newColor = new Color(255, 160, 122, 150); // Light Red with reduced opacity
+                        // Auto-update status column when a red value is found
+                        int statusColumn = table.getColumnCount() - 1;
+                        tableModel.setCellColor(row, statusColumn, Color.ORANGE);
+                    }
+                } catch (NumberFormatException e) {
+                    // Not a number, don't color
                 }
-
-                // Save the color in the table model for persistence
-                tableModel.setCellColor(row, column, newColor);
-                cell.setBackground(newColor);
-                cell.setForeground(Color.BLACK);
-            } catch (NumberFormatException e) {
-                cell.setBackground(Color.WHITE);
-                cell.setForeground(Color.BLACK);
             }
-        } else {
-            cell.setBackground(Color.WHITE);
-            cell.setForeground(Color.BLACK);
         }
-        
+        // Status column has special coloring handled by updateStatusColor method in TablePage
+        else if (column == table.getColumnCount() - 1) {
+            // Status column - color will be set by the updateStatusColor method
+            // If no color is set yet, just keep it white
+            cell.setBackground(Color.WHITE);
+        }
+
+        // First column (part number) should be gray
+        if (column == 0) {
+            cell.setBackground(new Color(220, 220, 220)); // Light gray
+        }
+
         return cell;
     }
-} 
+}
