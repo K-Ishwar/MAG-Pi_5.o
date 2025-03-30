@@ -23,9 +23,9 @@ public class HistoryPage extends JPanel {
     private JTable coilshotHistoryTable;
     private PersistentColorTableModel headshotHistoryTableModel;
     private PersistentColorTableModel coilshotHistoryTableModel;
-    private JLabel totalPartsLabel;
-    private JLabel acceptedPartsLabel;
-    private JLabel rejectedPartsLabel;
+//    private JLabel totalPartsLabel;
+//    private JLabel acceptedPartsLabel;
+//    private JLabel rejectedPartsLabel;
     private RecordedVideosPage recordedVideosPage;
 
     /**
@@ -60,9 +60,9 @@ public class HistoryPage extends JPanel {
         updateTableRenderers();
 
         // Initialize labels
-        totalPartsLabel = new JLabel("Total Parts Tested: 0");
-        //acceptedPartsLabel = new JLabel("Accepted Parts: 0");
-        //rejectedPartsLabel = new JLabel("Rejected Parts: 0");
+//        totalPartsLabel = new JLabel("Total Parts Tested: 0");
+//        acceptedPartsLabel = new JLabel("Accepted Parts: 0");
+//        rejectedPartsLabel = new JLabel("Rejected Parts: 0");
     }
 
     private void setupUI() {
@@ -83,20 +83,20 @@ public class HistoryPage extends JPanel {
         machineIdLabel.setForeground(new Color(44, 62, 80));
 
         // Style the counter labels
-        totalPartsLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        totalPartsLabel.setForeground(new Color(44, 62, 80));
-
-        acceptedPartsLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        acceptedPartsLabel.setForeground(new Color(39, 174, 96)); // Green for accepted
-
-        rejectedPartsLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        rejectedPartsLabel.setForeground(new Color(231, 76, 60)); // Red for rejected
+//        totalPartsLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+//        totalPartsLabel.setForeground(new Color(44, 62, 80));
+//
+//        acceptedPartsLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+//        acceptedPartsLabel.setForeground(new Color(39, 174, 96)); // Green for accepted
+//
+//        rejectedPartsLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+//        rejectedPartsLabel.setForeground(new Color(231, 76, 60)); // Red for rejected
 
         headerPanel.add(operatorLabel);
         headerPanel.add(machineIdLabel);
-        headerPanel.add(totalPartsLabel);
-        headerPanel.add(acceptedPartsLabel);
-        headerPanel.add(rejectedPartsLabel);
+//        headerPanel.add(totalPartsLabel);
+//        headerPanel.add(acceptedPartsLabel);
+//        headerPanel.add(rejectedPartsLabel);
 
         add(headerPanel, BorderLayout.NORTH);
 
@@ -318,10 +318,10 @@ public class HistoryPage extends JPanel {
         int totalParts = session.getTotalPartsCount();
         int acceptedParts = session.getAcceptedPartsCount();
         int rejectedParts = session.getRejectedPartsCount();
-
-        totalPartsLabel.setText("Total Parts Tested: " + totalParts);
-        acceptedPartsLabel.setText("Accepted Parts: " + acceptedParts);
-        rejectedPartsLabel.setText("Rejected Parts: " + rejectedParts);
+//
+//        totalPartsLabel.setText("Total Parts Tested: " + totalParts);
+//        acceptedPartsLabel.setText("Accepted Parts: " + acceptedParts);
+//        rejectedPartsLabel.setText("Rejected Parts: " + rejectedParts);
     }
 
     private void updateTableRenderers() {
@@ -341,22 +341,78 @@ public class HistoryPage extends JPanel {
     private void styleTable(JTable table) {
         // Set row height and spacing
         table.setRowHeight(30);
-        table.setIntercellSpacing(new Dimension(10, 5));
+        table.setIntercellSpacing(new Dimension(5, 5));
         table.setShowGrid(true);
-        table.setGridColor(new Color(230, 230, 230));
+        table.setGridColor(new Color(120, 120, 120)); // Darker grid lines
+        table.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(100, 100, 100), 2),
+                BorderFactory.createEmptyBorder(1, 1, 1, 1)
+        ));
 
         // Style the header
-        table.getTableHeader().setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        table.getTableHeader().setBackground(new Color(0, 0, 0)); // Blue header
-        table.getTableHeader().setForeground(Color.BLACK);
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        table.getTableHeader().setBackground(new Color(230, 230, 230));
+        table.getTableHeader().setForeground(new Color(44, 62, 80));
+        table.getTableHeader().setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(100, 100, 100), 2),
+                BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        ));
+
+        // Set column widths
+        table.getColumnModel().getColumn(0).setPreferredWidth(80); // Part No
+        for (int i = 1; i < table.getColumnCount() - 1; i += 2) {
+            table.getColumnModel().getColumn(i).setPreferredWidth(100); // Current columns
+            table.getColumnModel().getColumn(i + 1).setPreferredWidth(80); // Time columns
+        }
+        table.getColumnModel().getColumn(table.getColumnCount() - 1).setPreferredWidth(100); // Status
 
         // Prevent column resizing and reordering
         table.getTableHeader().setResizingAllowed(false);
         table.getTableHeader().setReorderingAllowed(false);
 
-        // Set selection colors
-        table.setSelectionBackground(new Color(25, 118, 210, 100)); // Semi-transparent blue
-        table.setSelectionForeground(Color.BLACK);
+        // Set custom renderer that preserves cell colors
+        table.setDefaultRenderer(Object.class, new CustomCellRenderer(
+                table == headshotHistoryTable ? session.getHeadShotThreshold() : session.getCoilShotThreshold(),
+                (PersistentColorTableModel) table.getModel()) {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                                                           boolean isSelected, boolean hasFocus, int row, int column) {
+                JComponent c = (JComponent) super.getTableCellRendererComponent(table, value,
+                        isSelected, hasFocus, row, column);
+
+                // Add border to each cell
+                c.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 0, 1, 1, new Color(180, 180, 180)),
+                        BorderFactory.createEmptyBorder(2, 5, 2, 5)
+                ));
+
+                // Add left border for first column
+                if (column == 0) {
+                    c.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createMatteBorder(0, 1, 1, 1, new Color(180, 180, 180)),
+                            BorderFactory.createEmptyBorder(2, 5, 2, 5)
+                    ));
+                }
+
+                // Format current values (odd columns)
+                if (column > 0 && column < table.getColumnCount() - 1 && column % 2 == 1) {
+                    if (value instanceof Number) {
+                        setText(String.format("%.2f", ((Number) value).doubleValue()));
+                    }
+                }
+                // Format time values (even columns)
+                else if (column > 0 && column < table.getColumnCount() - 1 && column % 2 == 0) {
+                    if (value instanceof Number) {
+                        setText(String.format("%.3f", ((Number) value).doubleValue()));
+                    }
+                }
+
+                // Center align all cells
+                setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+
+                return c;
+            }
+        });
     }
 
     /**
