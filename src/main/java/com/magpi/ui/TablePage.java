@@ -200,21 +200,14 @@ public class TablePage extends JPanel {
         titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
 
         // Style the table
-        table.setRowHeight(30);
-        table.setIntercellSpacing(new Dimension(10, 5));
-        table.setShowGrid(true);
-        table.setGridColor(new Color(255, 255, 255));
-        table.getTableHeader().setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        table.getTableHeader().setBackground(new Color(0, 0, 0));
-        table.getTableHeader().setForeground(Color.BLACK);
+        styleTable(table);
 
-        // Prevent column resizing and reordering
-        table.getTableHeader().setResizingAllowed(false);
-        table.getTableHeader().setReorderingAllowed(false);
-
-        // Create a custom scrollpane with padding
+        // Create a custom scrollpane with padding and border
         JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(180, 180, 180)),
+                BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        ));
         scrollPane.getViewport().setBackground(Color.WHITE);
 
         panel.add(titleLabel, BorderLayout.NORTH);
@@ -384,13 +377,6 @@ public class TablePage extends JPanel {
                     part.setStatus(hasRedValue ? "FAIL" : "PASS");
                 }
 
-                // Copy row to history if needed
-                if (tableModel == headshotTableModel) {
-                    copyRowToHistoryTable(tableModel, i, session.getHistoryPanel().getHeadshotHistoryTableModel());
-                } else if (tableModel == coilshotTableModel) {
-                    copyRowToHistoryTable(tableModel, i, session.getHistoryPanel().getCoilshotHistoryTableModel());
-                }
-
                 return;
             }
         }
@@ -473,6 +459,18 @@ public class TablePage extends JPanel {
     }
 
     private void endSession() {
+        // Copy all parts to history at once
+        for (TestPart part : session.getParts()) {
+            int partNumber = part.getPartNumber();
+            for (int i = 0; i < headshotTableModel.getRowCount(); i++) {
+                if (headshotTableModel.getValueAt(i, 0).equals(partNumber)) {
+                    copyRowToHistoryTable(headshotTableModel, i, session.getHistoryPanel().getHeadshotHistoryTableModel());
+                    copyRowToHistoryTable(coilshotTableModel, i, session.getHistoryPanel().getCoilshotHistoryTableModel());
+                    break;
+                }
+            }
+        }
+
         session.endSession();
         endTimeLabel.setText("End Time: " +
                 session.getEndTime().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
@@ -509,6 +507,88 @@ public class TablePage extends JPanel {
                 historyModel.setCellColor(historyRow, col, cellColor);
             }
         }
+    }
+
+    private void styleTable(JTable table) {
+        // Set row height and spacing
+        table.setRowHeight(30);
+        table.setIntercellSpacing(new Dimension(5, 5));
+        table.setShowGrid(true);
+        table.setGridColor(new Color(120, 120, 120)); // Darker grid lines
+        table.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(100, 100, 100), 2),
+                BorderFactory.createEmptyBorder(1, 1, 1, 1)
+        ));
+
+        // Style the header
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        table.getTableHeader().setBackground(new Color(230, 230, 230));
+        table.getTableHeader().setForeground(new Color(44, 62, 80));
+        table.getTableHeader().setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(100, 100, 100), 2),
+                BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        ));
+
+        // Set column widths
+        table.getColumnModel().getColumn(0).setPreferredWidth(80); // Part No
+        for (int i = 1; i < table.getColumnCount() - 1; i += 2) {
+            // Current columns
+            table.getColumnModel().getColumn(i).setPreferredWidth(100);
+            // Time columns
+            table.getColumnModel().getColumn(i + 1).setPreferredWidth(80);
+        }
+        table.getColumnModel().getColumn(table.getColumnCount() - 1).setPreferredWidth(100); // Status
+
+        // Prevent column resizing and reordering
+        table.getTableHeader().setResizingAllowed(false);
+        table.getTableHeader().setReorderingAllowed(false);
+
+        // Set default renderer for better number formatting and borders
+        table.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public java.awt.Component getTableCellRendererComponent(JTable table, Object value,
+                                                                    boolean isSelected, boolean hasFocus, int row, int column) {
+                JComponent c = (JComponent) super.getTableCellRendererComponent(table, value,
+                        isSelected, hasFocus, row, column);
+
+                // Add border to each cell
+                c.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 0, 1, 1, new Color(180, 180, 180)), // Bottom and right borders
+                        BorderFactory.createEmptyBorder(2, 5, 2, 5) // Padding
+                ));
+
+                // Add left border for first column
+                if (column == 0) {
+                    c.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createMatteBorder(0, 1, 1, 1, new Color(180, 180, 180)),
+                            BorderFactory.createEmptyBorder(2, 5, 2, 5)
+                    ));
+                }
+
+                // Format current values (odd columns)
+                if (column > 0 && column < table.getColumnCount() - 1 && column % 2 == 1) {
+                    if (value instanceof Number) {
+                        setText(String.format("%.2f", ((Number) value).doubleValue()));
+                    }
+                }
+                // Format time values (even columns)
+                else if (column > 0 && column < table.getColumnCount() - 1 && column % 2 == 0) {
+                    if (value instanceof Number) {
+                        setText(String.format("%.3f", ((Number) value).doubleValue()));
+                    }
+                }
+
+                // Center align all cells
+                setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+
+                // Set background color
+                if (!isSelected) {
+                    setBackground(row % 2 == 0 ? Color.WHITE : new Color(245, 245, 245));
+                }
+
+                return c;
+            }
+        });
     }
 
     /**
